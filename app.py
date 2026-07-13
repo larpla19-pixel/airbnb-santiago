@@ -30,7 +30,7 @@ def cargar_componentes():
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             urllib.request.install_opener(opener)
 
-            urllib.request.urlretrieve(url_modelo, archivo_modelo
+            urllib.request.urlretrieve(url_modelo, archivo_modelo)
 
     modelo = joblib.load(archivo_modelo)
     columnas_x_data = joblib.load(columnas_x)
