@@ -3,39 +3,31 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
-import urllib.request
+import gdown
 
 # Configuración de la página
 st.set_page_config(page_title="Simulador de precios Airbnb Santiago", layout="wide")
 
-# Cargar el modelo y los datos desde la nube de forma asíncrona
+# Cargar el modelo y los datos
 @st.cache_resource
 def cargar_componentes():
     archivo_modelo = 'modelo_airbnb.pkl'
-    archivo_csv = 'airbnb_santiago_clean.csv'
-    columnas_x = 'columnas_entrenamiento.pkl' # Este queda local desde GitHub
 
-    # 1. El CSV y las columnas se leen directo de la carpeta (ya que están en GitHub)
+    # El CSV y las columnas se leen directo de la carpeta (ya que están en GitHub)
     df = pd.read_csv('airbnb_santiago_clean.csv', sep=';')
     columnas_x = joblib.load('columnas_entrenamiento.pkl')
 
-    # 2. Descarga del Modelo usando el endpoint de la API para evadir el bloqueo de +100MB
+    # Descarga automática y segura del modelo pesado mediante gdown
     if not os.path.exists(archivo_modelo):
         with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
-            url_modelo = f"https://www.googleapis.com/drive/v3/files/{id_modelo_drive}?alt=media"
+            url_modelo = f"https://drive.google.com/uc?id={id_modelo_drive}"
 
-            # Configuramos un User-Agent para que Google Drive acepte la petición de Streamlit
-            opener = urllib.request.build_opener()
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            urllib.request.install_opener(opener)
-
-            urllib.request.urlretrieve(url_modelo, archivo_modelo)
+            # gdown descarga el archivo binario real saltándose advertencias de virus y bloqueos
+            gdown.download(url_modelo, archivo_modelo, quiet=True)
 
     modelo = joblib.load(archivo_modelo)
-    columnas_x_data = joblib.load(columnas_x)
-    df = pd.read_csv(archivo_csv, sep=';')
-    return modelo, columnas_x_data, df
+    return modelo, columnas_x, df
 
 modelo, columnas_x, df = cargar_componentes()
 
