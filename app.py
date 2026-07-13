@@ -93,12 +93,11 @@ st.markdown("---")
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
 if not df_filtrado.empty:
-    # PARCHE DE SOLUCIÓN: Extraemos, renombramos y forzamos la conversión a float de forma explícita (.astype(float))
     df_mapa = df_filtrado[['latitude', 'longitude']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
     df_mapa['lat'] = df_mapa['lat'].astype(float)
     df_mapa['lon'] = df_mapa['lon'].astype(float)
 
-    map_key = f"mapa_{comuna_sel}_{room_sel}_{minutos_metro_sel}_{accommodates_sel}_{bedrooms_sel}"
-    st.map(df_mapa, key=map_key)
+    # Renderizado limpio sin argumentos obsoletos
+    st.map(df_mapa)
 else:
     st.warning("No se encontraron propiedades exactas con esta combinación de filtros en la base de datos. Intenta flexibilizar los criterios.")
