@@ -1,2 +1,10 @@
 # airbnb-santiago
-Este proyecto desarrolla una solución analítica End-to-End para optimizar la estrategia de precios de propiedades de Airbnb en la Región Metropolitana, Chile. El flujo abarca desde la ingeniería de datos y el entrenamiento de modelos de Machine Learning hasta el despliegue de una aplicación interactiva que ejecuta predicciones en tiempo real.
+Aplicación de Machine Learning diseñada para la estimación de precios y análisis competitivo de alojamientos en Santiago. Orientada a la toma de decisiones basada en datos y el control de gestión inmobiliario.
+Características Principales
+Predicción de Precios: Algoritmo de ML (RandomForest) que estima precios sugeridos, mínimos y máximos.
+
+Control de Gestión: Visualización de KPIs y proyecciones financieras en tiempo real.
+
+Análisis Geoespacial: Mapeo interactivo de la oferta de mercado filtrada por ubicación y características.
+
+Stack Tecnológico: Python (Pandas, Scikit-Learn, Joblib), Streamlit.
