@@ -15,21 +15,22 @@ def cargar_componentes():
     archivo_csv = 'airbnb_santiago_clean.csv'
     columnas_x = 'columnas_entrenamiento.pkl' # Este queda local desde GitHub
 
-    # 1. Descarga del Modelo forzando el bypass de la advertencia de tamaño
+    # 1. El CSV y las columnas se leen directo de la carpeta (ya que están en GitHub)
+    df = pd.read_csv('airbnb_santiago_clean.csv', sep=';')
+    columnas_x = joblib.load('columnas_entrenamiento.pkl')
+
+    # 2. Descarga del Modelo usando el endpoint de la API para evadir el bloqueo de +100MB
     if not os.path.exists(archivo_modelo):
         with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
-            # Nueva URL estructurada para evadir el bloqueo de archivos grandes
-            url_modelo = f"https://docs.google.com/uc?export=download&confirm=t&id={id_modelo_drive}"
-            urllib.request.urlretrieve(url_modelo, archivo_modelo)
+            url_modelo = f"https://www.googleapis.com/drive/v3/files/{id_modelo_drive}?alt=media"
 
-    # 2. Descarga automática del CSV si no existe en el servidor de Streamlit
-    if not os.path.exists(archivo_csv):
-        with st.spinner('Descargando base de datos optimizada...'):
-            # 🛑 REEMPLAZA ESTO por el ID de tu archivo CSV en Google Drive
-            id_csv_drive = "TU_ID_DEL_CSV_AQUÍ" 
-            url_csv = f"https://docs.google.com/uc?export=download&id={id_csv_drive}"
-            urllib.request.urlretrieve(url_csv, archivo_csv)
+            # Configuramos un User-Agent para que Google Drive acepte la petición de Streamlit
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            urllib.request.install_opener(opener)
+
+            urllib.request.urlretrieve(url_modelo, archivo_modelo
 
     modelo = joblib.load(archivo_modelo)
     columnas_x_data = joblib.load(columnas_x)
