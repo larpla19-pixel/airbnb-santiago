@@ -13,7 +13,7 @@ st.set_page_config(page_title="Simulador de precios Airbnb Santiago", layout="wi
 def cargar_componentes():
     archivo_modelo = 'modelo_airbnb.pkl'
 
-    # El CSV y las columnas se leen directo de la carpeta (ya que están en GitHub)
+    # El CSV y las columnas se leen directo de la carpeta (GitHub)
     df = pd.read_csv('airbnb_santiago_clean.csv', sep=';')
     columnas_x = joblib.load('columnas_entrenamiento.pkl')
 
@@ -22,8 +22,6 @@ def cargar_componentes():
         with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
             url_modelo = f"https://drive.google.com/uc?id={id_modelo_drive}"
-
-            # gdown descarga el archivo binario real saltándose advertencias de virus y bloqueos
             gdown.download(url_modelo, archivo_modelo, quiet=True)
 
     modelo = joblib.load(archivo_modelo)
@@ -95,8 +93,11 @@ st.markdown("---")
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
 if not df_filtrado.empty:
-    # Solución al error de compatibilidad: Se extrae solo latitud y longitud limpias sin 'size'
+    # PARCHE DE SOLUCIÓN: Extraemos, renombramos y forzamos la conversión a float de forma explícita (.astype(float))
     df_mapa = df_filtrado[['latitude', 'longitude']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
+    df_mapa['lat'] = df_mapa['lat'].astype(float)
+    df_mapa['lon'] = df_mapa['lon'].astype(float)
+
     map_key = f"mapa_{comuna_sel}_{room_sel}_{minutos_metro_sel}_{accommodates_sel}_{bedrooms_sel}"
     st.map(df_mapa, key=map_key)
 else:
