@@ -2,30 +2,46 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from pathlib import Path
+import os
+import urllib.request
 
 # Configuración de la página
 st.set_page_config(page_title="Simulador de precios Airbnb Santiago", layout="wide")
 
-# Rutas relativas a la raíz del proyecto (donde vive este app.py)
-MODELS_DIR = Path("models")
-DATA_PROCESSED = Path("data") / "processed"
-
-# Cargar el modelo y los datos usando el CSV con delimitador de punto y coma (;)
+# Cargar el modelo y los datos desde la nube de forma asíncrona
 @st.cache_resource
 def cargar_componentes():
-    modelo = joblib.load(MODELS_DIR / "modelo_airbnb.pkl")
-    columnas_x = joblib.load(MODELS_DIR / "columnas_entrenamiento.pkl")
-    df = pd.read_csv(DATA_PROCESSED / "airbnb_santiago_clean.csv", sep=';')
-    return modelo, columnas_x, df
+    archivo_modelo = 'modelo_airbnb.pkl'
+    archivo_csv = 'airbnb_santiago_clean.csv'
+    columnas_x = 'columnas_entrenamiento.pkl' # Este queda local desde GitHub
+
+    # 1. Descarga automática del Modelo si no existe en el servidor de Streamlit
+    if not os.path.exists(archivo_modelo):
+        with st.spinner('Descargando modelo predictivo de IA desde Google Drive... (Esto solo toma unos segundos)'):
+            id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
+            url_modelo = f"https://docs.google.com/uc?export=download&id={id_modelo_drive}"
+            urllib.request.urlretrieve(url_modelo, archivo_modelo)
+
+    # 2. Descarga automática del CSV si no existe en el servidor de Streamlit
+    if not os.path.exists(archivo_csv):
+        with st.spinner('Descargando base de datos optimizada...'):
+            # 🛑 REEMPLAZA ESTO por el ID de tu archivo CSV en Google Drive
+            id_csv_drive = "TU_ID_DEL_CSV_AQUÍ" 
+            url_csv = f"https://docs.google.com/uc?export=download&id={id_csv_drive}"
+            urllib.request.urlretrieve(url_csv, archivo_csv)
+
+    modelo = joblib.load(archivo_modelo)
+    columnas_x_data = joblib.load(columnas_x)
+    df = pd.read_csv(archivo_csv, sep=';')
+    return modelo, columnas_x_data, df
 
 modelo, columnas_x, df = cargar_componentes()
 
 # --- INTERFAZ DE USUARIO ---
-st.title("Simulador de Precios Airbnb Santiago (Machine Learning)")
+st.title("📊 Simulador de Precios Airbnb Santiago (Machine Learning)")
 st.caption("Esta aplicación predice en tiempo real el precio óptimo usando un modelo RandomForest.")
 
-st.sidebar.header("Filtros de la Propiedad")
+st.sidebar.header("⚙️ Filtros de la Propiedad")
 
 comunas_disponibles = sorted(df['neighbourhood_cleansed'].unique())
 comuna_sel = st.sidebar.selectbox("Selecciona la Comuna", comunas_disponibles)
@@ -33,19 +49,26 @@ comuna_sel = st.sidebar.selectbox("Selecciona la Comuna", comunas_disponibles)
 room_types = sorted(df['room_type'].unique())
 room_sel = st.sidebar.selectbox("Tipo de Habitación", room_types)
 
-
 minutos_metro_sel = st.sidebar.slider("Minutos Caminando al Metro", 0, 30, 5)
 accommodates_sel = st.sidebar.slider("Capacidad de Huéspedes", int(df['accommodates'].min()), int(df['accommodates'].max()), 2)
 bedrooms_sel = st.sidebar.slider("Dormitorios", int(df['bedrooms'].min()), int(df['bedrooms'].max()), 1)
 bathrooms_sel = st.sidebar.slider("Baños", float(df['bathrooms_num'].min()), float(df['bathrooms_num'].max()), 1.0)
 min_nights_sel = st.sidebar.slider("Noches Mínimas", int(df['minimum_nights'].min()), 30, 1)
 
-df_comuna = df[df['neighbourhood_cleansed'] == comuna_sel]
+# --- FILTRADO DINÁMICO CON COPIA LIMPIA ---
+df_filtrado = df[
+    (df['neighbourhood_cleansed'] == comuna_sel) &
+    (df['room_type'] == room_sel) &
+    (df['accommodates'] >= accommodates_sel) &
+    (df['bedrooms'] == bedrooms_sel) &
+    (df['bathrooms_num'] == bathrooms_sel) &
+    (df['minimum_nights'] <= min_nights_sel) &
+    (df['minutos_al_metro'].between(minutos_metro_sel - 3, minutos_metro_sel + 3))
+].copy().reset_index(drop=True)
 
-# --- PROCESAMIENTO DE MACHINE LEARNING  ---
+# --- PROCESAMIENTO DE MACHINE LEARNING EN VIVO ---
 input_data = pd.DataFrame(0, index=[0], columns=columnas_x)
 
-# Llenamos las variables numéricas incluyendo los minutos al metro
 input_data['minutos_al_metro'] = minutos_metro_sel
 input_data['accommodates'] = accommodates_sel
 input_data['bedrooms'] = bedrooms_sel
@@ -63,18 +86,23 @@ if col_neigh in input_data.columns:
 precio_predicho = modelo.predict(input_data)[0]
 mae = 21815
 
-# --- DISEÑO DEL DASHBOARD ---
+# --- DISEÑO DEL DASHBOARD (MÉTRICAS) ---
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Precio Mínimo Sugerido", value=f"${int(precio_predicho - mae):,}".replace(",", "."))
 with col2:
-    st.metric(label="PRECIO SUGERIDO", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
+    st.metric(label="🎯 PRECIO SUGERIDO IA", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
 with col3:
     st.metric(label="Precio Máximo Sugerido", value=f"${int(precio_predicho + mae):,}".replace(",", "."))
 
 st.markdown("---")
 
-st.subheader(f"Distribución de propiedades en {comuna_sel}")
+# --- MAPA URBANO REACTIVO ---
+st.subheader(f"📍 Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
-df_mapa = df_comuna[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
-st.map(df_mapa, size='price')
+if not df_filtrado.empty:
+    df_mapa = df_filtrado[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
+    map_key = f"mapa_{comuna_sel}_{room_sel}_{minutos_metro_sel}_{accommodates_sel}_{bedrooms_sel}"
+    st.map(df_mapa, size='price', key=map_key)
+else:
+    st.warning("No se encontraron propiedades exactas con esta combinación de filtros en la base de datos. Intenta flexibilizar los criterios.")
