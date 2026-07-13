@@ -95,8 +95,9 @@ st.markdown("---")
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
 if not df_filtrado.empty:
-    df_mapa = df_filtrado[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
+    # Solución al error de compatibilidad: Se extrae solo latitud y longitud limpias sin 'size'
+    df_mapa = df_filtrado[['latitude', 'longitude']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
     map_key = f"mapa_{comuna_sel}_{room_sel}_{minutos_metro_sel}_{accommodates_sel}_{bedrooms_sel}"
-    st.map(df_mapa, size='price', key=map_key)
+    st.map(df_mapa, key=map_key)
 else:
     st.warning("No se encontraron propiedades exactas con esta combinación de filtros en la base de datos. Intenta flexibilizar los criterios.")
