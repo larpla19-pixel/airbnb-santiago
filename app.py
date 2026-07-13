@@ -15,11 +15,12 @@ def cargar_componentes():
     archivo_csv = 'airbnb_santiago_clean.csv'
     columnas_x = 'columnas_entrenamiento.pkl' # Este queda local desde GitHub
 
-    # 1. Descarga automática del Modelo si no existe en el servidor de Streamlit
+    # 1. Descarga del Modelo forzando el bypass de la advertencia de tamaño
     if not os.path.exists(archivo_modelo):
-        with st.spinner('Descargando modelo predictivo de IA desde Google Drive... (Esto solo toma unos segundos)'):
+        with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
-            url_modelo = f"https://docs.google.com/uc?export=download&id={id_modelo_drive}"
+            # Nueva URL estructurada para evadir el bloqueo de archivos grandes
+            url_modelo = f"https://docs.google.com/uc?export=download&confirm=t&id={id_modelo_drive}"
             urllib.request.urlretrieve(url_modelo, archivo_modelo)
 
     # 2. Descarga automática del CSV si no existe en el servidor de Streamlit
@@ -38,10 +39,10 @@ def cargar_componentes():
 modelo, columnas_x, df = cargar_componentes()
 
 # --- INTERFAZ DE USUARIO ---
-st.title("📊 Simulador de Precios Airbnb Santiago (Machine Learning)")
+st.title("Simulador de Precios Airbnb Santiago (Machine Learning)")
 st.caption("Esta aplicación predice en tiempo real el precio óptimo usando un modelo RandomForest.")
 
-st.sidebar.header("⚙️ Filtros de la Propiedad")
+st.sidebar.header("Filtros de la Propiedad")
 
 comunas_disponibles = sorted(df['neighbourhood_cleansed'].unique())
 comuna_sel = st.sidebar.selectbox("Selecciona la Comuna", comunas_disponibles)
@@ -91,14 +92,14 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Precio Mínimo Sugerido", value=f"${int(precio_predicho - mae):,}".replace(",", "."))
 with col2:
-    st.metric(label="🎯 PRECIO SUGERIDO IA", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
+    st.metric(label="PRECIO SUGERIDO", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
 with col3:
     st.metric(label="Precio Máximo Sugerido", value=f"${int(precio_predicho + mae):,}".replace(",", "."))
 
 st.markdown("---")
 
 # --- MAPA URBANO REACTIVO ---
-st.subheader(f"📍 Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
+st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
 if not df_filtrado.empty:
     df_mapa = df_filtrado[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
