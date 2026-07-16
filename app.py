@@ -152,7 +152,7 @@ st.markdown("---")
 
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
-# MAPEADO DE COORDENADAS CON ESCALADO DE TAMAÑO INTELIGENTE
+# MAPEADO DE COORDENADAS CON LIMPIEZA DE DATOS ULTRA-ROBUSTA
 if not df_filtrado.empty:
     if 'latitude' in df_filtrado.columns and 'longitude' in df_filtrado.columns:
         columnas_mapa = ['latitude', 'longitude']
@@ -164,18 +164,24 @@ if not df_filtrado.empty:
         df_mapa['lon'] = df_mapa['lon'].astype(float)
 
         if 'price' in df_mapa.columns:
-            df_mapa['price'] = df_mapa['price'].astype(float)
+            # --- LIMPIEZA DE PRECIO ULTRA-SEGURA ---
+            # Convierte a texto, quita símbolos de moneda ($), puntos de miles y comas de decimales
+            precios_limpios = df_mapa['price'].astype(str).str.replace('$', '', regex=False)
+            precios_limpios = precios_limpios.str.replace('.', '', regex=False)
+            precios_limpios = precios_limpios.str.replace(',', '', regex=False).str.strip()
 
-            # --- ESCALADO DE TAMAÑO NORMALIZADO (Para evitar círculos gigantes) ---
-            min_p = df_mapa['price'].min()
-            max_p = df_mapa['price'].max()
+            # Convertir a valor numérico de forma tolerante a errores (los textos inválidos se vuelven NaN)
+            df_mapa['price_num'] = pd.to_numeric(precios_limpios, errors='coerce').fillna(0.0)
 
-            # Si todos los precios son iguales, definimos un tamaño base fijo
+            # --- ESCALADO DE TAMAÑO NORMALIZADO ---
+            min_p = df_mapa['price_num'].min()
+            max_p = df_mapa['price_num'].max()
+
             if max_p == min_p:
                 df_mapa['tamanio_mapa'] = 30.0
             else:
-                # Escalamos linealmente el precio a un rango visible en pantalla de 15 a 80 px
-                df_mapa['tamanio_mapa'] = 15 + ((df_mapa['price'] - min_p) / (max_p - min_p)) * 65.0
+                # Escalamos de 15 a 80 px
+                df_mapa['tamanio_mapa'] = 15 + ((df_mapa['price_num'] - min_p) / (max_p - min_p)) * 65.0
 
             st.map(df_mapa, size='tamanio_mapa')
         else:
