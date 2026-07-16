@@ -11,31 +11,49 @@ st.set_page_config(page_title="Simulador de precios Airbnb Santiago", layout="wi
 # Cargar el modelo y los datos de forma robusta adaptada a la nube y local
 @st.cache_resource
 def cargar_componentes():
-    # Obtener la carpeta donde está guardado este archivo app.py
     dir_actual = os.path.dirname(os.path.abspath(__file__))
 
-    # Si app.py se está ejecutando desde 'notebooks', subimos un nivel para ir a la raíz
+    # Si app.py se ejecuta desde 'notebooks', subimos un nivel para ir a la raíz
     if os.path.basename(dir_actual) == 'notebooks':
         dir_raiz = os.path.dirname(dir_actual)
     else:
         dir_raiz = dir_actual
 
-    # Definir rutas absolutas apuntando exactamente a la estructura de tu proyecto
+    # Definir rutas para los modelos
     archivo_modelo = os.path.join(dir_raiz, 'models', 'modelo_airbnb.pkl')
     ruta_columnas = os.path.join(dir_raiz, 'models', 'columnas_entrenamiento.pkl')
-    ruta_csv = os.path.join(dir_raiz, 'data', 'processed', 'airbnb_santiago_clean.csv')
 
-    # 1. Asegurar la existencia de la carpeta 'models' por si acaso
+    # Buscar el CSV en tu estructura real: data/processed/
+    possible_dirs = [
+        ['data', 'processed', 'airbnb_santiago_clean.csv'],
+        ['Data', 'Processed', 'airbnb_santiago_clean.csv'],
+        ['data', 'airbnb_santiago_clean.csv'],
+        ['Data', 'airbnb_santiago_clean.csv'],
+        ['airbnb_santiago_clean.csv']
+    ]
+
+    ruta_csv = None
+    for p_dir in possible_dirs:
+        # Intento de ruta uniendo el directorio raíz con las carpetas
+        tmp = os.path.join(dir_raiz, *p_dir)
+        if os.path.exists(tmp):
+            ruta_csv = tmp
+            break
+
+    if not ruta_csv:
+        ruta_csv = os.path.join(dir_raiz, 'data', 'processed', 'airbnb_santiago_clean.csv')
+
+    # Asegurar que existe la carpeta para descargar el modelo
     os.makedirs(os.path.join(dir_raiz, 'models'), exist_ok=True)
 
-    # 2. DESCARGAR PRIMERO: Si el modelo no existe (como en la nube de Streamlit), se descarga del Drive
+    # Descargar modelo si no existe
     if not os.path.exists(archivo_modelo):
         with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
             url_modelo = f"https://drive.google.com/uc?id={id_modelo_drive}"
             gdown.download(url_modelo, archivo_modelo, quiet=True)
 
-    # 3. CARGAR DESPUÉS: Una vez descargado y asegurado en la carpeta 'models', se carga
+    # Cargar archivos seguros
     df = pd.read_csv(ruta_csv, sep=';')
     columnas_x = joblib.load(ruta_columnas)
     modelo = joblib.load(archivo_modelo)
@@ -71,7 +89,7 @@ bathrooms_sel = st.sidebar.slider(
 
 min_nights_sel = st.sidebar.slider("Noches Mínimas", int(df['minimum_nights'].min()), 30, 1)
 
-# --- FILTRADO DINÁMICO CON COPIA LIMPIA ---
+# --- FILTRADO DINÁMICO ---
 df_filtrado = df[
     (df['neighbourhood_cleansed'] == comuna_sel) &
     (df['room_type'] == room_sel) &
@@ -82,9 +100,8 @@ df_filtrado = df[
     (df['minutos_al_metro'].between(minutos_metro_sel - 3, minutos_metro_sel + 3))
 ].copy().reset_index(drop=True)
 
-# --- PROCESAMIENTO DE MACHINE LEARNING EN VIVO ---
+# --- MACHINE LEARNING ---
 input_data = pd.DataFrame(0, index=[0], columns=columnas_x)
-
 input_data['minutos_al_metro'] = minutos_metro_sel
 input_data['accommodates'] = accommodates_sel
 input_data['bedrooms'] = bedrooms_sel
@@ -102,7 +119,6 @@ if col_neigh in input_data.columns:
 precio_predicho = modelo.predict(input_data)[0]
 mae = 21815
 
-# --- DISEÑO DEL DASHBOARD (MÉTRICAS) ---
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Precio Mínimo Sugerido", value=f"${int(precio_predicho - mae):,}".replace(",", "."))
@@ -113,13 +129,27 @@ with col3:
 
 st.markdown("---")
 
-# --- MAPA URBANO REACTIVO ---
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
+# MAPEADO DE COORDENADAS CON SOPORTE COMPLETO A 'price'
 if not df_filtrado.empty:
-    df_mapa = df_filtrado[['latitude', 'longitude']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
-    df_mapa['lat'] = df_mapa['lat'].astype(float)
-    df_mapa['lon'] = df_mapa['lon'].astype(float)
-    st.map(df_mapa)
+    if 'latitude' in df_filtrado.columns and 'longitude' in df_filtrado.columns:
+        # Aseguramos quedarnos con lat, lon y price para dimensionar el tamaño en el mapa
+        columnas_mapa = ['latitude', 'longitude']
+        if 'price' in df_filtrado.columns:
+            columnas_mapa.append('price')
+
+        df_mapa = df_filtrado[columnas_mapa].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
+        df_mapa['lat'] = df_mapa['lat'].astype(float)
+        df_mapa['lon'] = df_mapa['lon'].astype(float)
+
+        # Si existe price, graficamos los puntos ponderando el tamaño según su precio
+        if 'price' in df_mapa.columns:
+            df_mapa['price'] = df_mapa['price'].astype(float)
+            st.map(df_mapa, size='price')
+        else:
+            st.map(df_mapa)
+    else:
+        st.warning("El dataset no cuenta con las columnas 'latitude' o 'longitude' para poder renderizar el mapa.")
 else:
-    st.warning("No se encontraron propiedades exactas con esta combinación de filtros en la base de datos. Intenta flexibilizar los criterios.")
+    st.warning("No se encontraron propiedades exactas con esta combinación de filtros. Intenta flexibilizar los criterios.")
