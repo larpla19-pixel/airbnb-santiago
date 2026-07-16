@@ -152,7 +152,7 @@ st.markdown("---")
 
 st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrado)} disponibles)")
 
-# MAPEADO DE COORDENADAS CON SOPORTE COMPLETO A 'price'
+# MAPEADO DE COORDENADAS CON ESCALADO DE TAMAÑO INTELIGENTE
 if not df_filtrado.empty:
     if 'latitude' in df_filtrado.columns and 'longitude' in df_filtrado.columns:
         columnas_mapa = ['latitude', 'longitude']
@@ -165,7 +165,19 @@ if not df_filtrado.empty:
 
         if 'price' in df_mapa.columns:
             df_mapa['price'] = df_mapa['price'].astype(float)
-            st.map(df_mapa, size='price')
+
+            # --- ESCALADO DE TAMAÑO NORMALIZADO (Para evitar círculos gigantes) ---
+            min_p = df_mapa['price'].min()
+            max_p = df_mapa['price'].max()
+
+            # Si todos los precios son iguales, definimos un tamaño base fijo
+            if max_p == min_p:
+                df_mapa['tamanio_mapa'] = 30.0
+            else:
+                # Escalamos linealmente el precio a un rango visible en pantalla de 15 a 80 px
+                df_mapa['tamanio_mapa'] = 15 + ((df_mapa['price'] - min_p) / (max_p - min_p)) * 65.0
+
+            st.map(df_mapa, size='tamanio_mapa')
         else:
             st.map(df_mapa)
     else:
