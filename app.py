@@ -8,6 +8,20 @@ import gdown
 # Configuración de la página
 st.set_page_config(page_title="Simulador de precios Airbnb Santiago", layout="wide")
 
+# Función ultra-robusta para encontrar archivos buscando alternativas de carpetas y mayúsculas
+def buscar_archivo_insensible(directorio_base, partes_ruta):
+    ruta_actual = directorio_base
+    for parte in partes_ruta:
+        if not os.path.exists(ruta_actual):
+            return None
+        # Listar contenido para buscar coincidencia insensible a mayúsculas/minúsculas
+        coincidencias = [item for item in os.listdir(ruta_actual) if item.lower() == parte.lower()]
+        if coincidencias:
+            ruta_actual = os.path.join(ruta_actual, coincidencias[0])
+        else:
+            return None
+    return ruta_actual
+
 # Cargar el modelo y los datos de forma robusta adaptada a la nube y local
 @st.cache_resource
 def cargar_componentes():
@@ -19,41 +33,48 @@ def cargar_componentes():
     else:
         dir_raiz = dir_actual
 
-    # Definir rutas para los modelos
-    archivo_modelo = os.path.join(dir_raiz, 'models', 'modelo_airbnb.pkl')
-    ruta_columnas = os.path.join(dir_raiz, 'models', 'columnas_entrenamiento.pkl')
+    # 1. Buscar dinámicamente el archivo de columnas_entrenamiento.pkl
+    ruta_columnas = buscar_archivo_insensible(dir_raiz, ['models', 'columnas_entrenamiento.pkl'])
+    if not ruta_columnas:
+        # Intento alternativo en raíz si no está en models/
+        ruta_columnas = buscar_archivo_insensible(dir_raiz, ['columnas_entrenamiento.pkl'])
+    if not ruta_columnas:
+        # Ruta por defecto por si todo falla
+        ruta_columnas = os.path.join(dir_raiz, 'models', 'columnas_entrenamiento.pkl')
 
-    # Buscar el CSV en tu estructura real: data/processed/
+    # 2. Definir ruta para el archivo modelo_airbnb.pkl (insensible a mayúsculas para la carpeta models)
+    dir_models_real = buscar_archivo_insensible(dir_raiz, ['models'])
+    if not dir_models_real:
+        dir_models_real = os.path.join(dir_raiz, 'models')
+        os.makedirs(dir_models_real, exist_ok=True)
+
+    archivo_modelo = os.path.join(dir_models_real, 'modelo_airbnb.pkl')
+
+    # 3. Buscar el CSV usando la función de rastreo dinámico
     possible_dirs = [
         ['data', 'processed', 'airbnb_santiago_clean.csv'],
-        ['Data', 'Processed', 'airbnb_santiago_clean.csv'],
         ['data', 'airbnb_santiago_clean.csv'],
-        ['Data', 'airbnb_santiago_clean.csv'],
         ['airbnb_santiago_clean.csv']
     ]
 
     ruta_csv = None
     for p_dir in possible_dirs:
-        # Intento de ruta uniendo el directorio raíz con las carpetas
-        tmp = os.path.join(dir_raiz, *p_dir)
-        if os.path.exists(tmp):
+        tmp = buscar_archivo_insensible(dir_raiz, p_dir)
+        if tmp and os.path.exists(tmp):
             ruta_csv = tmp
             break
 
     if not ruta_csv:
         ruta_csv = os.path.join(dir_raiz, 'data', 'processed', 'airbnb_santiago_clean.csv')
 
-    # Asegurar que existe la carpeta para descargar el modelo
-    os.makedirs(os.path.join(dir_raiz, 'models'), exist_ok=True)
-
-    # Descargar modelo si no existe
+    # 4. Descargar modelo de Drive si no existe localmente
     if not os.path.exists(archivo_modelo):
         with st.spinner('Descargando modelo predictivo de IA... (Esto solo toma unos segundos la primera vez)'):
             id_modelo_drive = "1yCPNrclsoaT_1SjjjmnyLHduouK4Ehps" 
             url_modelo = f"https://drive.google.com/uc?id={id_modelo_drive}"
             gdown.download(url_modelo, archivo_modelo, quiet=True)
 
-    # Cargar archivos seguros
+    # Cargar los componentes
     df = pd.read_csv(ruta_csv, sep=';')
     columnas_x = joblib.load(ruta_columnas)
     modelo = joblib.load(archivo_modelo)
@@ -134,7 +155,6 @@ st.subheader(f"Propiedades encontradas con tus características ({len(df_filtrad
 # MAPEADO DE COORDENADAS CON SOPORTE COMPLETO A 'price'
 if not df_filtrado.empty:
     if 'latitude' in df_filtrado.columns and 'longitude' in df_filtrado.columns:
-        # Aseguramos quedarnos con lat, lon y price para dimensionar el tamaño en el mapa
         columnas_mapa = ['latitude', 'longitude']
         if 'price' in df_filtrado.columns:
             columnas_mapa.append('price')
@@ -143,7 +163,6 @@ if not df_filtrado.empty:
         df_mapa['lat'] = df_mapa['lat'].astype(float)
         df_mapa['lon'] = df_mapa['lon'].astype(float)
 
-        # Si existe price, graficamos los puntos ponderando el tamaño según su precio
         if 'price' in df_mapa.columns:
             df_mapa['price'] = df_mapa['price'].astype(float)
             st.map(df_mapa, size='price')
