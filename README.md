@@ -8,3 +8,7 @@ Control de Gestión: Visualización de KPIs y proyecciones financieras en tiempo
 Análisis Geoespacial: Mapeo interactivo de la oferta de mercado filtrada por ubicación y características.
 
 Stack Tecnológico: Python (Pandas, Scikit-Learn, Joblib), Streamlit.
+
+Esta aplicacion responde a la pregunta de:
+¿Cual es el precio optimo de una viviendo por noche bajo ciertas caracteristicas en la ciudad de Santiago de Chile?
+
