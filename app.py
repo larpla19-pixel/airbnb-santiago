@@ -199,10 +199,10 @@ if not df_mapa.empty:
     st.pydeck_chart(pdk.Deck(
         layers=[capa_metro, capa_propiedades],
         initial_view_state=vista,
-        tooltip={"text": "{estacion}
-{linea}"}
+        tooltip={"html": "<b>{estacion}</b><br/>Línea {linea}"}
     ))
 
     st.caption("🔴 L1  🟡 L2  🟤 L3  🔵 L4  🟢 L5  🟣 L6  ⚫ Propiedades")
 else:
     st.warning("No se encontraron propiedades con esta combinación de filtros. Intenta flexibilizar los criterios.")
+
