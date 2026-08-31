@@ -176,7 +176,10 @@ if not df_mapa.empty:
         "ScatterplotLayer",
         data=df_mapa,
         get_position='[lon, lat]',
-        get_fill_color='[30, 30, 30, 160]',
+        get_fill_color='[255, 90, 0, 200]',
+        get_line_color='[255, 255, 255, 255]',
+        line_width_min_pixels=1,
+        stroked=True,
         get_radius='size_normalizado',
         pickable=True,
     )
@@ -197,6 +200,8 @@ if not df_mapa.empty:
     )
 
     st.pydeck_chart(pdk.Deck(
+        map_provider="carto",
+        map_style="light",
         layers=[capa_metro, capa_propiedades],
         initial_view_state=vista,
         tooltip={"html": "<b>{estacion}</b><br/>Línea {linea}"}
