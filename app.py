@@ -92,4 +92,9 @@ st.markdown("---")
 st.subheader(f"📍 Distribución de propiedades en {comuna_sel}")
 
 df_mapa = df_comuna[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
-st.map(df_mapa, size='price')
+
+if not df_mapa.empty:
+    df_mapa['size_normalizado'] = (df_mapa['price'] / df_mapa['price'].max()) * 50 + 10
+    st.map(df_mapa, size='size_normalizado')
+else:
+    st.warning("No hay propiedades para mostrar en esta comuna.")
