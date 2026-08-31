@@ -19,7 +19,7 @@ def cargar_componentes():
             id_modelo_drive = "1O_z9kjnG7UG0LFivAeaeBrdVQjHtExyF"
             url_modelo = f"https://drive.google.com/uc?id={id_modelo_drive}"
             try:
-                gdown.download(url_modelo, archivo_modelo, quiet=False, fuzzy=True)
+                gdown.download(url_modelo, archivo_modelo, quiet=False)
             except Exception as e:
                 st.error(f"No se pudo descargar el modelo: {e}")
                 st.stop()
