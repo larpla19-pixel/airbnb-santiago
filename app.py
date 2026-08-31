@@ -40,10 +40,10 @@ def predecir_con_incertidumbre(modelo, input_data):
 modelo, columnas_x, df = cargar_componentes()
 
 # --- INTERFAZ DE USUARIO ---
-st.title("📊 Simulador de Precios Airbnb Santiago (Machine Learning)")
+st.title("Simulador de Precios Airbnb Santiago (Machine Learning)")
 st.caption("Esta aplicación predice en tiempo real el precio óptimo usando un modelo RandomForest.")
 
-st.sidebar.header("⚙️ Filtros de la Propiedad")
+st.sidebar.header("Filtros de la Propiedad")
 
 comunas_disponibles = sorted(df['neighbourhood_cleansed'].unique())
 comuna_sel = st.sidebar.selectbox("Selecciona la Comuna", comunas_disponibles)
@@ -83,7 +83,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Precio Mínimo Sugerido", value=f"${int(precio_predicho - incertidumbre):,}".replace(",", "."))
 with col2:
-    st.metric(label="🎯 PRECIO SUGERIDO IA", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
+    st.metric(label="PRECIO SUGERIDO IA", value=f"${int(precio_predicho):,}".replace(",", "."), delta="Recomendado")
 with col3:
     st.metric(label="Precio Máximo Sugerido", value=f"${int(precio_predicho + incertidumbre):,}".replace(",", "."))
 
