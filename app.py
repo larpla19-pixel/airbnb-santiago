@@ -212,3 +212,4 @@ if not df_mapa.empty:
 else:
     st.warning("No se encontraron propiedades con esta combinación de filtros. Intenta flexibilizar los criterios.")
 
+
