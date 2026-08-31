@@ -91,7 +91,16 @@ st.markdown("---")
 
 st.subheader(f"📍 Distribución de propiedades en {comuna_sel}")
 
-df_mapa = df_comuna[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
+df_filtrado = df[
+    (df['neighbourhood_cleansed'] == comuna_sel) &
+    (df['room_type'] == room_sel) &
+    (df['accommodates'] >= accommodates_sel) &
+    (df['bedrooms'] == bedrooms_sel) &
+    (df['bathrooms_num'] == bathrooms_sel) &
+    (df['minimum_nights'] <= min_nights_sel)
+].copy()
+
+df_mapa = df_filtrado[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
 
 if not df_mapa.empty:
     df_mapa['size_normalizado'] = (df_mapa['price'] / df_mapa['price'].max()) * 50 + 10
