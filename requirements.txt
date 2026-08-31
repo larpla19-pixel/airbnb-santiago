@@ -3,4 +3,4 @@ pandas
 numpy
 joblib
 scikit-learn
-gdown
+gdown>=5.1.0
