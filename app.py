@@ -54,7 +54,7 @@ room_sel = st.sidebar.selectbox("Tipo de Habitación", room_types)
 minutos_metro_sel = st.sidebar.slider("Minutos Caminando al Metro", 0, 30, 5)
 accommodates_sel = st.sidebar.slider("Capacidad de Huéspedes", int(df['accommodates'].min()), int(df['accommodates'].max()), 2)
 bedrooms_sel = st.sidebar.slider("Dormitorios", int(df['bedrooms'].min()), int(df['bedrooms'].max()), 1)
-bathrooms_sel = st.sidebar.slider("Baños", float(df['bathrooms_num'].min()), float(df['bathrooms_num'].max()), 1.0)
+bathrooms_sel = st.sidebar.slider("Baños", float(df['bathrooms_num'].min()), float(df['bathrooms_num'].max()), 1.0, step=0.5)
 min_nights_sel = st.sidebar.slider("Noches Mínimas", int(df['minimum_nights'].min()), 30, 1)
 
 df_comuna = df[df['neighbourhood_cleansed'] == comuna_sel]
