@@ -51,13 +51,19 @@ comuna_sel = st.sidebar.selectbox("Selecciona la Comuna", comunas_disponibles)
 room_types = sorted(df['room_type'].unique())
 room_sel = st.sidebar.selectbox("Tipo de Habitación", room_types)
 
-minutos_metro_sel = st.sidebar.slider("Minutos Caminando al Metro", 0, 30, 5)
+# Manejo especial para Lo Barnechea (sin red de Metro cercana)
+es_lo_barnechea = "lo barnechea" in comuna_sel.lower()
+
+if es_lo_barnechea:
+    st.sidebar.caption("ℹ️ *Lo Barnechea no cuenta con red de Metro directa. Esta variable no aplica para esta comuna.*")
+    minutos_metro_sel = st.sidebar.slider("Minutos Caminando al Metro", 0, 30, 30, disabled=True)
+else:
+    minutos_metro_sel = st.sidebar.slider("Minutos Caminando al Metro (Máximo)", 0, 30, 15)
+
 accommodates_sel = st.sidebar.slider("Capacidad de Huéspedes", int(df['accommodates'].min()), int(df['accommodates'].max()), 2)
 bedrooms_sel = st.sidebar.slider("Dormitorios", int(df['bedrooms'].min()), int(df['bedrooms'].max()), 1)
 bathrooms_sel = st.sidebar.slider("Baños", float(df['bathrooms_num'].min()), float(df['bathrooms_num'].max()), 1.0, step=0.5)
 min_nights_sel = st.sidebar.slider("Noches Mínimas", int(df['minimum_nights'].min()), 30, 1)
-
-df_comuna = df[df['neighbourhood_cleansed'] == comuna_sel]
 
 # --- PROCESAMIENTO DE MACHINE LEARNING EN VIVO ---
 input_data = pd.DataFrame(0, index=[0], columns=columnas_x)
@@ -91,19 +97,27 @@ st.markdown("---")
 
 st.subheader(f"📍 Distribución de propiedades en {comuna_sel}")
 
-df_filtrado = df[
+# Construcción dinámica de condiciones de filtrado para el mapa
+condiciones = (
     (df['neighbourhood_cleansed'] == comuna_sel) &
     (df['room_type'] == room_sel) &
     (df['accommodates'] >= accommodates_sel) &
     (df['bedrooms'] == bedrooms_sel) &
     (df['bathrooms_num'] == bathrooms_sel) &
     (df['minimum_nights'] <= min_nights_sel)
-].copy()
+)
+
+# Si NO es Lo Barnechea y la columna existe en el df, aplicamos el filtro de minutos al metro en el mapa
+if not es_lo_barnechea and 'minutos_al_metro' in df.columns:
+    condiciones = condiciones & (df['minutos_al_metro'] <= minutos_metro_sel)
+
+df_filtrado = df[condiciones].copy()
 
 df_mapa = df_filtrado[['latitude', 'longitude', 'price']].rename(columns={'latitude': 'lat', 'longitude': 'lon'}).dropna()
 
 if not df_mapa.empty:
     df_mapa['size_normalizado'] = (df_mapa['price'] / df_mapa['price'].max()) * 50 + 10
     st.map(df_mapa, size='size_normalizado')
+    st.caption(f"Mostrando {len(df_mapa)} propiedades que cumplen con los criterios.")
 else:
-    st.warning("No hay propiedades para mostrar en esta comuna.")
+    st.warning("No hay propiedades que coincidan exactamente con estos filtros en la comuna seleccionada.")
